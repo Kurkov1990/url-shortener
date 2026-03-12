@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: url-shortener-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-url_shortener}
+      POSTGRES_USER: ${DB_USERNAME:-url_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-url_password}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-url_user} -d ${DB_NAME:-url_shortener}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

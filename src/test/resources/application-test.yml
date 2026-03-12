@@ -1,0 +1,13 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+
+app:
+  public-base-url: http://localhost:8080
+  jwt:
+    secret: ThisIsATestJwtSecretThatIsDefinitelyLongEnough12345
+    expiration-minutes: 120
