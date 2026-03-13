@@ -2,6 +2,7 @@ package com.app.urlshortener.service;
 
 import com.app.urlshortener.dto.link.CreateShortUrlRequest;
 import com.app.urlshortener.dto.link.UpdateExpirationRequest;
+import com.app.urlshortener.dto.link.UpdateShortUrlRequest;
 import com.app.urlshortener.entity.ShortUrl;
 import com.app.urlshortener.entity.User;
 import com.app.urlshortener.exception.BadRequestException;
@@ -30,12 +31,15 @@ public class LinkService {
 
     @Transactional
     public ShortUrl create(CreateShortUrlRequest request, User owner) {
-        validateUrl(request.originalUrl());
+        OffsetDateTime now = OffsetDateTime.now();
+        String normalizedUrl = normalizeAndValidateUrl(request.originalUrl());
+        validateFutureExpiration(request.expiresAt(), now);
+
         String code = generateUniqueCode();
 
         ShortUrl entity = new ShortUrl();
         entity.setCode(code);
-        entity.setOriginalUrl(request.originalUrl().trim());
+        entity.setOriginalUrl(normalizedUrl);
         entity.setExpiresAt(request.expiresAt());
         entity.setOwner(owner);
         entity.setActive(true);
@@ -47,7 +51,9 @@ public class LinkService {
     @Transactional(readOnly = true)
     public List<ShortUrl> findAll(User owner, boolean activeOnly) {
         if (activeOnly) {
-            return shortUrlRepository.findAllByOwnerAndActiveTrueAndExpiresAtAfterOrderByCreatedAtDesc(owner, OffsetDateTime.now());
+            return shortUrlRepository.findAllByOwnerAndActiveTrueAndExpiresAtAfterOrderByCreatedAtDesc(
+                    owner, OffsetDateTime.now()
+            );
         }
         return shortUrlRepository.findAllByOwnerOrderByCreatedAtDesc(owner);
     }
@@ -59,12 +65,57 @@ public class LinkService {
     }
 
     @Transactional
+    public ShortUrl update(Long id, UpdateShortUrlRequest request, User owner) {
+        ShortUrl entity = findOwnedById(id, owner);
+
+        boolean changed =
+                request.originalUrl() != null
+                        || request.expiresAt() != null
+                        || request.active() != null;
+
+        if (!changed) {
+            throw new BadRequestException("At least one field must be provided for update");
+        }
+
+        OffsetDateTime now = OffsetDateTime.now();
+
+        String newOriginalUrl = null;
+        OffsetDateTime newExpiresAt = null;
+        Boolean newActive = null;
+
+        if (request.originalUrl() != null) {
+            newOriginalUrl = normalizeAndValidateUrl(request.originalUrl());
+        }
+
+        if (request.expiresAt() != null) {
+            validateFutureExpiration(request.expiresAt(), now);
+            newExpiresAt = request.expiresAt();
+        }
+
+        if (request.active() != null) {
+            newActive = request.active();
+        }
+
+        if (newOriginalUrl != null) {
+            entity.setOriginalUrl(newOriginalUrl);
+        }
+        if (newExpiresAt != null) {
+            entity.setExpiresAt(newExpiresAt);
+        }
+        if (newActive != null) {
+            entity.setActive(newActive);
+        }
+
+        return shortUrlRepository.save(entity);
+    }
+
+    @Transactional
     public ShortUrl updateExpiration(Long id, UpdateExpirationRequest request, User owner) {
         ShortUrl entity = findOwnedById(id, owner);
+
+        validateFutureExpiration(request.expiresAt(), OffsetDateTime.now());
+
         entity.setExpiresAt(request.expiresAt());
-        if (entity.getExpiresAt().isBefore(OffsetDateTime.now())) {
-            throw new BadRequestException("Expiration date must be in the future");
-        }
         return shortUrlRepository.save(entity);
     }
 
@@ -73,17 +124,44 @@ public class LinkService {
         shortUrlRepository.delete(findOwnedById(id, owner));
     }
 
+    private String normalizeAndValidateUrl(String rawUrl) {
+        if (rawUrl == null) {
+            throw new BadRequestException("Original URL must not be null");
+        }
+
+        String normalizedUrl = rawUrl.trim();
+        if (normalizedUrl.isBlank()) {
+            throw new BadRequestException("Original URL must not be blank");
+        }
+
+        validateUrl(normalizedUrl);
+        return normalizedUrl;
+    }
+
+    private void validateFutureExpiration(OffsetDateTime expiresAt, OffsetDateTime now) {
+        if (expiresAt == null) {
+            throw new BadRequestException("Expiration date must not be null");
+        }
+
+        if (!expiresAt.isAfter(now)) {
+            throw new BadRequestException("Expiration date must be in the future");
+        }
+    }
+
     private void validateUrl(String rawUrl) {
+        URI uri;
         try {
-            URI uri = URI.create(rawUrl);
-            if (uri.getScheme() == null || uri.getHost() == null) {
-                throw new IllegalArgumentException("Missing scheme or host");
-            }
-            String scheme = uri.getScheme().toLowerCase();
-            if (!scheme.equals("http") && !scheme.equals("https")) {
-                throw new IllegalArgumentException("Unsupported scheme");
-            }
+            uri = URI.create(rawUrl);
         } catch (Exception ex) {
+            throw new BadRequestException("Original URL is not valid");
+        }
+
+        if (uri.getScheme() == null || uri.getHost() == null) {
+            throw new BadRequestException("Original URL is not valid");
+        }
+
+        String scheme = uri.getScheme().toLowerCase();
+        if (!scheme.equals("http") && !scheme.equals("https")) {
             throw new BadRequestException("Original URL is not valid");
         }
     }

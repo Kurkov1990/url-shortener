@@ -1,9 +1,6 @@
 package com.app.urlshortener.controller.v1;
 
-import com.app.urlshortener.dto.link.CreateShortUrlRequest;
-import com.app.urlshortener.dto.link.LinkStatsResponse;
-import com.app.urlshortener.dto.link.ShortUrlResponse;
-import com.app.urlshortener.dto.link.UpdateExpirationRequest;
+import com.app.urlshortener.dto.link.*;
 import com.app.urlshortener.entity.User;
 import com.app.urlshortener.mapper.ShortUrlMapper;
 import com.app.urlshortener.service.LinkService;
@@ -45,14 +42,27 @@ public class LinkController {
     public List<ShortUrlResponse> getAll(@RequestParam(defaultValue = "false") boolean activeOnly,
                                          @AuthenticationPrincipal UserDetails principal) {
         User user = userService.getByUsername(principal.getUsername());
-        return linkService.findAll(user, activeOnly).stream().map(shortUrlMapper::toResponse).toList();
+        return linkService.findAll(user, activeOnly)
+                .stream()
+                .map(shortUrlMapper::toResponse)
+                .toList();
     }
 
     @Operation(summary = "Get one short link by id")
     @GetMapping("/{id}")
-    public ShortUrlResponse getOne(@PathVariable Long id, @AuthenticationPrincipal UserDetails principal) {
+    public ShortUrlResponse getOne(@PathVariable Long id,
+                                   @AuthenticationPrincipal UserDetails principal) {
         User user = userService.getByUsername(principal.getUsername());
         return shortUrlMapper.toResponse(linkService.findOwnedById(id, user));
+    }
+
+    @Operation(summary = "Update short link")
+    @PutMapping("/{id}")
+    public ShortUrlResponse update(@PathVariable Long id,
+                                   @Valid @RequestBody UpdateShortUrlRequest request,
+                                   @AuthenticationPrincipal UserDetails principal) {
+        User user = userService.getByUsername(principal.getUsername());
+        return shortUrlMapper.toResponse(linkService.update(id, request, user));
     }
 
     @Operation(summary = "Update link expiration")
@@ -66,7 +76,8 @@ public class LinkController {
 
     @Operation(summary = "Get statistics for one short link")
     @GetMapping("/{id}/stats")
-    public LinkStatsResponse getStats(@PathVariable Long id, @AuthenticationPrincipal UserDetails principal) {
+    public LinkStatsResponse getStats(@PathVariable Long id,
+                                      @AuthenticationPrincipal UserDetails principal) {
         User user = userService.getByUsername(principal.getUsername());
         return shortUrlMapper.toStats(linkService.findOwnedById(id, user));
     }
@@ -74,7 +85,8 @@ public class LinkController {
     @Operation(summary = "Delete short link")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Long id, @AuthenticationPrincipal UserDetails principal) {
+    public void delete(@PathVariable Long id,
+                       @AuthenticationPrincipal UserDetails principal) {
         User user = userService.getByUsername(principal.getUsername());
         linkService.delete(id, user);
     }

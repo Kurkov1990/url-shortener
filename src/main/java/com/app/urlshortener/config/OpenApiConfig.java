@@ -22,8 +22,7 @@ public class OpenApiConfig {
                         .description("Versioned REST API for URL shortening")
                         .version("v1"))
                 .externalDocs(new ExternalDocumentation()
-                        .description("Project README")
-                        .url("https://example.local/readme"))
+                        .description("Project README"))
                 .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
                 .components(new Components()
                         .addSecuritySchemes(securitySchemeName,
