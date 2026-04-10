@@ -23,7 +23,7 @@ ext {
     springdocVersion = '3.0.2'
     jjwtVersion = '0.12.7'
     testcontainersVersion = '1.21.3'
-    bucket4jVersion = '8.14.0'
+    bucket4jVersion = '8.10.1'
 }
 
 dependencies {
