@@ -22,6 +22,7 @@ public class ShortUrlMapper {
                 publicBaseUrl + "/api/v1/redirect/" + entity.getCode(),
                 entity.getOriginalUrl(),
                 entity.getCreatedAt(),
+                entity.getUpdatedAt(),
                 entity.getExpiresAt(),
                 entity.getClickCount(),
                 entity.isActive(),

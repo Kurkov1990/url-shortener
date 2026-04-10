@@ -7,12 +7,14 @@ import com.app.urlshortener.service.LinkService;
 import com.app.urlshortener.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/links")
@@ -39,13 +41,11 @@ public class LinkController {
 
     @Operation(summary = "Get all user's short links")
     @GetMapping
-    public List<ShortUrlResponse> getAll(@RequestParam(defaultValue = "false") boolean activeOnly,
+    public Page<ShortUrlResponse> getAll(@RequestParam(defaultValue = "false") boolean activeOnly,
+                                         @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
                                          @AuthenticationPrincipal UserDetails principal) {
         User user = userService.getByUsername(principal.getUsername());
-        return linkService.findAll(user, activeOnly)
-                .stream()
-                .map(shortUrlMapper::toResponse)
-                .toList();
+        return linkService.findAll(user, activeOnly, pageable).map(shortUrlMapper::toResponse);
     }
 
     @Operation(summary = "Get one short link by id")

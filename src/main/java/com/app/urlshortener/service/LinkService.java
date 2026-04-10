@@ -9,12 +9,14 @@ import com.app.urlshortener.exception.BadRequestException;
 import com.app.urlshortener.exception.ConflictException;
 import com.app.urlshortener.exception.NotFoundException;
 import com.app.urlshortener.repository.ShortUrlRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URI;
 import java.time.OffsetDateTime;
-import java.util.List;
+import java.util.Optional;
 
 @Service
 public class LinkService {
@@ -49,13 +51,13 @@ public class LinkService {
     }
 
     @Transactional(readOnly = true)
-    public List<ShortUrl> findAll(User owner, boolean activeOnly) {
+    public Page<ShortUrl> findAll(User owner, boolean activeOnly, Pageable pageable) {
         if (activeOnly) {
             return shortUrlRepository.findAllByOwnerAndActiveTrueAndExpiresAtAfterOrderByCreatedAtDesc(
-                    owner, OffsetDateTime.now()
+                    owner, OffsetDateTime.now(), pageable
             );
         }
-        return shortUrlRepository.findAllByOwnerOrderByCreatedAtDesc(owner);
+        return shortUrlRepository.findAllByOwnerOrderByCreatedAtDesc(owner, pageable);
     }
 
     @Transactional(readOnly = true)
@@ -79,32 +81,16 @@ public class LinkService {
 
         OffsetDateTime now = OffsetDateTime.now();
 
-        String newOriginalUrl = null;
-        OffsetDateTime newExpiresAt = null;
-        Boolean newActive = null;
-
-        if (request.originalUrl() != null) {
-            newOriginalUrl = normalizeAndValidateUrl(request.originalUrl());
-        }
+        Optional.ofNullable(request.originalUrl())
+                .map(this::normalizeAndValidateUrl)
+                .ifPresent(entity::setOriginalUrl);
 
         if (request.expiresAt() != null) {
             validateFutureExpiration(request.expiresAt(), now);
-            newExpiresAt = request.expiresAt();
+            entity.setExpiresAt(request.expiresAt());
         }
 
-        if (request.active() != null) {
-            newActive = request.active();
-        }
-
-        if (newOriginalUrl != null) {
-            entity.setOriginalUrl(newOriginalUrl);
-        }
-        if (newExpiresAt != null) {
-            entity.setExpiresAt(newExpiresAt);
-        }
-        if (newActive != null) {
-            entity.setActive(newActive);
-        }
+        Optional.ofNullable(request.active()).ifPresent(entity::setActive);
 
         return shortUrlRepository.save(entity);
     }

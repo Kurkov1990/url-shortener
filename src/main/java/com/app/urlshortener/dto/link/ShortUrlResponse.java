@@ -8,6 +8,7 @@ public record ShortUrlResponse(
         String shortUrl,
         String originalUrl,
         OffsetDateTime createdAt,
+        OffsetDateTime updatedAt,
         OffsetDateTime expiresAt,
         long clickCount,
         boolean active,

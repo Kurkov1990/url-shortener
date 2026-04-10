@@ -20,6 +20,6 @@ public class RedirectController {
     @GetMapping("/{code}")
     public ResponseEntity<Void> redirect(@PathVariable String code) {
         String originalUrl = redirectService.resolveOriginalUrl(code);
-        return ResponseEntity.status(302).header(HttpHeaders.LOCATION, URI.create(originalUrl).toString()).build();
+        return ResponseEntity.status(301).header(HttpHeaders.LOCATION, URI.create(originalUrl).toString()).build();
     }
 }

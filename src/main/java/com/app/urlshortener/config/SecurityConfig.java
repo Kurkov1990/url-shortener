@@ -1,5 +1,6 @@
 package com.app.urlshortener.config;
 
+import com.app.urlshortener.filter.RateLimitingFilter;
 import com.app.urlshortener.security.JwtAuthenticationFilter;
 import com.app.urlshortener.security.JwtProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -22,8 +23,14 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     @Bean
+    public RateLimitingFilter rateLimitingFilter() {
+        return new RateLimitingFilter();
+    }
+
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
-                                                   JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
+                                                   JwtAuthenticationFilter jwtAuthenticationFilter,
+                                                   RateLimitingFilter rateLimitingFilter) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
@@ -43,6 +50,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/redirect/**").permitAll()
                         .anyRequest().authenticated()
                 )
+                .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

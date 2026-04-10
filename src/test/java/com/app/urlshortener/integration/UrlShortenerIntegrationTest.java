@@ -80,8 +80,8 @@ class UrlShortenerIntegrationTest extends AbstractPostgresIntegrationTest {
         mockMvc.perform(get("/api/v1/links")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(id))
-                .andExpect(jsonPath("$[0].shortCode").value(code));
+                .andExpect(jsonPath("$.content[0].id").value(id))
+                .andExpect(jsonPath("$.content[0].shortCode").value(code));
 
         mockMvc.perform(get("/api/v1/links/" + id + "/stats")
                         .header("Authorization", "Bearer " + token))
@@ -89,6 +89,16 @@ class UrlShortenerIntegrationTest extends AbstractPostgresIntegrationTest {
                 .andExpect(jsonPath("$.id").value(id))
                 .andExpect(jsonPath("$.shortCode").value(code))
                 .andExpect(jsonPath("$.clickCount").value(0));
+
+        mockMvc.perform(get("/api/v1/redirect/" + code))
+                .andExpect(status().isMovedPermanently())
+                .andExpect(header().string("Location", "https://example.com/very/long/url"));
+
+        mockMvc.perform(get("/api/v1/links/" + id + "/stats")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.shortCode").value(code))
+                .andExpect(jsonPath("$.clickCount").value(1));
 
         String updatedUrl = "https://updated.example.com/path";
         OffsetDateTime updatedExpiresAt = OffsetDateTime.now().plusDays(5);
@@ -116,16 +126,6 @@ class UrlShortenerIntegrationTest extends AbstractPostgresIntegrationTest {
                 .andExpect(jsonPath("$.shortCode").value(code))
                 .andExpect(jsonPath("$.originalUrl").value(updatedUrl))
                 .andExpect(jsonPath("$.active").value(false));
-
-        mockMvc.perform(get("/api/v1/redirect/" + code))
-                .andExpect(status().isFound())
-                .andExpect(header().string("Location", updatedUrl));
-
-        mockMvc.perform(get("/api/v1/links/" + id + "/stats")
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.shortCode").value(code))
-                .andExpect(jsonPath("$.clickCount").value(1));
 
         mockMvc.perform(delete("/api/v1/links/" + id)
                         .header("Authorization", "Bearer " + token))

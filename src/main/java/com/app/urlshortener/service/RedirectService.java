@@ -23,8 +23,7 @@ public class RedirectService {
         if (!entity.isActive() || entity.isExpired()) {
             throw new ExpiredLinkException("Short link is inactive or expired");
         }
-        entity.setClickCount(entity.getClickCount() + 1);
-        shortUrlRepository.save(entity);
+        shortUrlRepository.incrementClickCount(code);
         return entity.getOriginalUrl();
     }
 }

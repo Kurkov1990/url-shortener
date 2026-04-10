@@ -10,6 +10,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 
@@ -17,7 +18,6 @@ import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "short_urls", indexes = {
-        @Index(name = "idx_short_urls_code", columnList = "code", unique = true),
         @Index(name = "idx_short_urls_owner_id", columnList = "owner_id")
 })
 public class ShortUrl {
@@ -38,6 +38,9 @@ public class ShortUrl {
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
+    @Column(name = "updated_at", nullable = false)
+    private OffsetDateTime updatedAt;
+
     @Column(name = "expires_at", nullable = false)
     private OffsetDateTime expiresAt;
 
@@ -53,9 +56,18 @@ public class ShortUrl {
 
     @PrePersist
     public void prePersist() {
+        OffsetDateTime now = OffsetDateTime.now();
         if (createdAt == null) {
-            createdAt = OffsetDateTime.now();
+            createdAt = now;
         }
+        if (updatedAt == null) {
+            updatedAt = now;
+        }
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        updatedAt = OffsetDateTime.now();
     }
 
     public boolean isExpired() {
@@ -67,6 +79,7 @@ public class ShortUrl {
     public String getCode() { return code; }
     public String getOriginalUrl() { return originalUrl; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
+    public OffsetDateTime getUpdatedAt() { return updatedAt; }
     public OffsetDateTime getExpiresAt() { return expiresAt; }
     public long getClickCount() { return clickCount; }
     public boolean isActive() { return active; }
@@ -77,6 +90,7 @@ public class ShortUrl {
     public void setCode(String code) { this.code = code; }
     public void setOriginalUrl(String originalUrl) { this.originalUrl = originalUrl; }
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
+    public void setUpdatedAt(OffsetDateTime updatedAt) { this.updatedAt = updatedAt; }
     public void setExpiresAt(OffsetDateTime expiresAt) { this.expiresAt = expiresAt; }
     public void setClickCount(long clickCount) { this.clickCount = clickCount; }
     public void setActive(boolean active) { this.active = active; }

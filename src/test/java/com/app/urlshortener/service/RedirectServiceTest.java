@@ -30,12 +30,12 @@ class RedirectServiceTest {
         entity.setClickCount(2);
 
         when(shortUrlRepository.findByCode("abc12345")).thenReturn(Optional.of(entity));
-        when(shortUrlRepository.save(any(ShortUrl.class))).thenAnswer(inv -> inv.getArgument(0));
 
         String result = redirectService.resolveOriginalUrl("abc12345");
 
         assertEquals("https://example.com", result);
-        assertEquals(3, entity.getClickCount());
+        verify(shortUrlRepository).incrementClickCount("abc12345");
+        verify(shortUrlRepository, never()).save(any());
     }
 
     @Test
